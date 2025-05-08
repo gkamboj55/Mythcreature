@@ -128,29 +128,38 @@ export default function AddToStorybookPage() {
       })
 
       // Create a new storybook without adding the creature
-      const success = await createNewStorybook(deviceId)
-      console.log("[CLIENT] Create storybook result:", success)
+      try {
+        const success = await createNewStorybook(deviceId)
+        console.log("[CLIENT] Create storybook result:", success)
 
-      if (success) {
-        // Fetch the newly created storybook
-        const newStorybook = await getStorybook(deviceId)
-        console.log("[CLIENT] Fetched new storybook:", newStorybook)
+        if (success) {
+          // Fetch the newly created storybook
+          const newStorybook = await getStorybook(deviceId)
+          console.log("[CLIENT] Fetched new storybook:", newStorybook)
 
-        setStorybook(newStorybook)
-        setStorybookCreated(true)
+          setStorybook(newStorybook)
+          setStorybookCreated(true)
 
+          toast({
+            title: "Storybook created!",
+            description: "Your magical storybook has been created. You can now add creatures to it.",
+          })
+        } else {
+          throw new Error("Failed to create storybook")
+        }
+      } catch (error: any) {
+        console.error("[CLIENT] Error creating storybook:", error)
         toast({
-          title: "Storybook created!",
-          description: "Your magical storybook has been created. You can now add creatures to it.",
+          title: "Couldn't create storybook",
+          description: `There was an error creating your storybook: ${error.message || "Unknown error"}`,
+          variant: "destructive",
         })
-      } else {
-        throw new Error("Failed to create storybook")
       }
-    } catch (error) {
-      console.error("[CLIENT] Error creating storybook:", error)
+    } catch (error: any) {
+      console.error("[CLIENT] Error in handleCreateNewStorybook:", error)
       toast({
         title: "Couldn't create storybook",
-        description: "There was an error creating your storybook. Please try again.",
+        description: `There was an error creating your storybook: ${error.message || "Unknown error"}`,
         variant: "destructive",
       })
     } finally {

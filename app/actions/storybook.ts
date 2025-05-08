@@ -50,8 +50,25 @@ export async function createStorybook(deviceId: string, bookName?: string): Prom
 
     if (checkError) {
       console.error("[SERVER] Error checking for existing storybook:", checkError)
-      // This could indicate the table doesn't exist
-      throw new Error(`Failed to check for existing storybook: ${checkError.message}`)
+      // Check if the error indicates the table doesn't exist
+      if (checkError.message.includes("does not exist") || checkError.code === "PGRST204") {
+        console.error("[SERVER] Storybooks table may not exist. Attempting to create it.")
+
+        // Try to create the tables
+        try {
+          // Call the setup endpoint to create the tables
+          const setupResponse = await fetch(`/api/setup-storybook-tables?key=${process.env.CLEANUP_SECRET_KEY}`)
+          if (!setupResponse.ok) {
+            throw new Error(`Failed to set up storybook tables: ${setupResponse.statusText}`)
+          }
+          console.log("[SERVER] Successfully created storybook tables")
+        } catch (setupError) {
+          console.error("[SERVER] Failed to set up storybook tables:", setupError)
+          throw new Error(`Failed to set up storybook tables: ${setupError}`)
+        }
+      } else {
+        throw new Error(`Failed to check for existing storybook: ${checkError.message}`)
+      }
     }
 
     if (existingBook && existingBook.length > 0) {
@@ -71,7 +88,7 @@ export async function createStorybook(deviceId: string, bookName?: string): Prom
 
     if (error) {
       console.error("[SERVER] Error creating storybook in database:", error)
-      throw error
+      throw new Error(`Failed to create storybook in database: ${error.message}`)
     }
 
     if (!data || !data.id) {
@@ -83,7 +100,7 @@ export async function createStorybook(deviceId: string, bookName?: string): Prom
     return data.id
   } catch (error) {
     console.error("[SERVER] Error in createStorybook:", error)
-    return null
+    throw error // Re-throw the error to be handled by the calling function
   }
 }
 
@@ -380,34 +397,44 @@ export async function createNewStorybook(deviceId: string, bookName?: string): P
     }
 
     // Check if user already has a storybook
-    const existingStorybook = await getStorybook(deviceId)
-    console.log("[SERVER] Existing storybook check result:", existingStorybook ? "Found" : "Not found")
+    try {
+      const existingStorybook = await getStorybook(deviceId)
+      console.log("[SERVER] Existing storybook check result:", existingStorybook ? "Found" : "Not found")
 
-    if (existingStorybook) {
-      // User already has a storybook, no need to create a new one
-      console.log("[SERVER] User already has a storybook, returning true")
-      return true
+      if (existingStorybook) {
+        // User already has a storybook, no need to create a new one
+        console.log("[SERVER] User already has a storybook, returning true")
+        return true
+      }
+    } catch (checkError) {
+      console.error("[SERVER] Error checking for existing storybook:", checkError)
+      // Continue to try creating a new one
     }
 
     // Create a new storybook
     console.log("[SERVER] Creating new storybook for device:", deviceId)
-    const newBookId = await createStorybook(deviceId, bookName)
-    console.log("[SERVER] Create storybook result:", newBookId)
+    try {
+      const newBookId = await createStorybook(deviceId, bookName)
+      console.log("[SERVER] Create storybook result:", newBookId)
 
-    if (!newBookId) {
-      console.error("[SERVER] Failed to create storybook - no ID returned")
-      return false
+      if (!newBookId) {
+        console.error("[SERVER] Failed to create storybook - no ID returned")
+        return false
+      }
+
+      console.log("[SERVER] Created new storybook with ID:", newBookId)
+
+      // Revalidate the storybook page to reflect changes
+      revalidatePath("/storybook")
+      revalidatePath("/storybook/add")
+
+      return true
+    } catch (createError) {
+      console.error("[SERVER] Error in createStorybook:", createError)
+      throw createError // Re-throw to provide more context
     }
-
-    console.log("[SERVER] Created new storybook with ID:", newBookId)
-
-    // Revalidate the storybook page to reflect changes
-    revalidatePath("/storybook")
-    revalidatePath("/storybook/add")
-
-    return true
   } catch (error) {
     console.error("[SERVER] Error creating new storybook:", error)
-    return false
+    throw error // Re-throw to be handled by the client
   }
 }
