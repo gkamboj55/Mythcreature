@@ -133,7 +133,7 @@ export default function Home() {
           <header className="text-center mb-8">
             <div className="mb-6 flex justify-center">
               <img
-                src="/images/magical-creature-banner.png"
+                src="/images/magical-creature-banner.jpeg"
                 alt="Cute unicorn in a magical colorful forest"
                 className="rounded-lg shadow-lg max-w-full md:max-w-lg mx-auto"
               />
