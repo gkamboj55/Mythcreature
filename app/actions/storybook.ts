@@ -31,8 +31,35 @@ type StorybookEntry = {
  */
 export async function createStorybook(deviceId: string, bookName?: string): Promise<number | null> {
   try {
+    console.log("[SERVER] Creating storybook in database for device:", deviceId)
+
+    if (!deviceId) {
+      console.error("[SERVER] No device ID provided to createStorybook")
+      return null
+    }
+
     const supabase = createServerSupabaseClient()
 
+    // First check if a storybook already exists for this device
+    console.log("[SERVER] Checking for existing storybook")
+    const { data: existingBook, error: checkError } = await supabase
+      .from("storybooks")
+      .select("id")
+      .eq("device_id", deviceId)
+      .limit(1)
+
+    if (checkError) {
+      console.error("[SERVER] Error checking for existing storybook:", checkError)
+      // This could indicate the table doesn't exist
+      throw new Error(`Failed to check for existing storybook: ${checkError.message}`)
+    }
+
+    if (existingBook && existingBook.length > 0) {
+      console.log("[SERVER] Found existing storybook:", existingBook[0].id)
+      return existingBook[0].id
+    }
+
+    console.log("[SERVER] No existing storybook found, creating new one")
     const { data, error } = await supabase
       .from("storybooks")
       .insert({
@@ -43,13 +70,19 @@ export async function createStorybook(deviceId: string, bookName?: string): Prom
       .single()
 
     if (error) {
-      console.error("Error creating storybook:", error)
+      console.error("[SERVER] Error creating storybook in database:", error)
       throw error
     }
 
+    if (!data || !data.id) {
+      console.error("[SERVER] No data returned from storybook creation")
+      throw new Error("No data returned from storybook creation")
+    }
+
+    console.log("[SERVER] Successfully created storybook with ID:", data.id)
     return data.id
   } catch (error) {
-    console.error("Error creating storybook:", error)
+    console.error("[SERVER] Error in createStorybook:", error)
     return null
   }
 }
@@ -339,17 +372,30 @@ export async function reorderStories(storybookId: number, entryIds: number[]): P
  */
 export async function createNewStorybook(deviceId: string, bookName?: string): Promise<boolean> {
   try {
+    console.log("[SERVER] Starting createNewStorybook for device:", deviceId)
+
+    if (!deviceId) {
+      console.error("[SERVER] No device ID provided to createNewStorybook")
+      return false
+    }
+
     // Check if user already has a storybook
     const existingStorybook = await getStorybook(deviceId)
+    console.log("[SERVER] Existing storybook check result:", existingStorybook ? "Found" : "Not found")
+
     if (existingStorybook) {
       // User already has a storybook, no need to create a new one
+      console.log("[SERVER] User already has a storybook, returning true")
       return true
     }
 
     // Create a new storybook
+    console.log("[SERVER] Creating new storybook for device:", deviceId)
     const newBookId = await createStorybook(deviceId, bookName)
+    console.log("[SERVER] Create storybook result:", newBookId)
+
     if (!newBookId) {
-      console.error("[SERVER] Failed to create storybook")
+      console.error("[SERVER] Failed to create storybook - no ID returned")
       return false
     }
 
@@ -357,6 +403,7 @@ export async function createNewStorybook(deviceId: string, bookName?: string): P
 
     // Revalidate the storybook page to reflect changes
     revalidatePath("/storybook")
+    revalidatePath("/storybook/add")
 
     return true
   } catch (error) {

@@ -116,6 +116,11 @@ export default function AddToStorybookPage() {
     setIsCreating(true)
     try {
       const deviceId = getOrCreateDeviceId()
+      console.log("[CLIENT] Creating storybook with device ID:", deviceId)
+
+      if (!deviceId) {
+        throw new Error("Failed to get device ID")
+      }
 
       toast({
         title: "Creating new storybook...",
@@ -124,10 +129,13 @@ export default function AddToStorybookPage() {
 
       // Create a new storybook without adding the creature
       const success = await createNewStorybook(deviceId)
+      console.log("[CLIENT] Create storybook result:", success)
 
       if (success) {
         // Fetch the newly created storybook
         const newStorybook = await getStorybook(deviceId)
+        console.log("[CLIENT] Fetched new storybook:", newStorybook)
+
         setStorybook(newStorybook)
         setStorybookCreated(true)
 
@@ -139,7 +147,7 @@ export default function AddToStorybookPage() {
         throw new Error("Failed to create storybook")
       }
     } catch (error) {
-      console.error("Error creating storybook:", error)
+      console.error("[CLIENT] Error creating storybook:", error)
       toast({
         title: "Couldn't create storybook",
         description: "There was an error creating your storybook. Please try again.",
