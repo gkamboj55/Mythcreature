@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Loader2, BookOpen, ArrowLeft, Plus, Check } from "lucide-react"
 import Link from "next/link"
 import { getOrCreateDeviceId } from "@/lib/device-id"
-import { getStorybook, addStoryToBook, isCreatureInStorybook } from "@/app/actions/storybook"
+import { getStorybook, addStoryToBook, isCreatureInStorybook, createNewStorybook } from "@/app/actions/storybook"
 import { toast } from "@/hooks/use-toast"
 
 export default function AddToStorybookPage() {
@@ -15,10 +15,12 @@ export default function AddToStorybookPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [isAdding, setIsAdding] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
   const [creatureId, setCreatureId] = useState<string | null>(null)
   const [storybook, setStorybook] = useState<any>(null)
   const [creatureData, setCreatureData] = useState<any>(null)
   const [alreadyInBook, setAlreadyInBook] = useState(false)
+  const [storybookCreated, setStorybookCreated] = useState(false)
 
   useEffect(() => {
     async function initialize() {
@@ -88,15 +90,11 @@ export default function AddToStorybookPage() {
       const success = await addStoryToBook(deviceId, creatureId)
 
       if (success) {
+        setAlreadyInBook(true)
         toast({
           title: "Added to your storybook!",
           description: "This magical creature is now part of your collection.",
         })
-
-        // Navigate to the storybook page
-        setTimeout(() => {
-          router.push("/storybook")
-        }, 1500)
       } else {
         throw new Error("Failed to add to storybook")
       }
@@ -113,9 +111,9 @@ export default function AddToStorybookPage() {
   }
 
   const handleCreateNewStorybook = async () => {
-    if (!creatureId || isAdding) return
+    if (isCreating) return
 
-    setIsAdding(true)
+    setIsCreating(true)
     try {
       const deviceId = getOrCreateDeviceId()
 
@@ -124,19 +122,19 @@ export default function AddToStorybookPage() {
         description: "Please wait while we set up your magical storybook.",
       })
 
-      // The addStoryToBook function will create a new storybook if one doesn't exist
-      const success = await addStoryToBook(deviceId, creatureId)
+      // Create a new storybook without adding the creature
+      const success = await createNewStorybook(deviceId)
 
       if (success) {
+        // Fetch the newly created storybook
+        const newStorybook = await getStorybook(deviceId)
+        setStorybook(newStorybook)
+        setStorybookCreated(true)
+
         toast({
           title: "Storybook created!",
-          description: "Your magical storybook has been created with this creature.",
+          description: "Your magical storybook has been created. You can now add creatures to it.",
         })
-
-        // Navigate to the storybook page
-        setTimeout(() => {
-          router.push("/storybook")
-        }, 1500)
       } else {
         throw new Error("Failed to create storybook")
       }
@@ -148,7 +146,7 @@ export default function AddToStorybookPage() {
         variant: "destructive",
       })
     } finally {
-      setIsAdding(false)
+      setIsCreating(false)
     }
   }
 
@@ -226,14 +224,14 @@ export default function AddToStorybookPage() {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {storybook ? (
+          {storybook || storybookCreated ? (
             <Card>
               <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
                 <CardTitle>Add to Existing Storybook</CardTitle>
               </CardHeader>
               <CardContent className="p-6">
                 <p className="mb-4">
-                  Add this magical creature to your existing storybook collection with {storybook.entries?.length || 0}{" "}
+                  Add this magical creature to your existing storybook collection with {storybook?.entries?.length || 0}{" "}
                   stories.
                 </p>
               </CardContent>
@@ -271,9 +269,9 @@ export default function AddToStorybookPage() {
                 <Button
                   className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white"
                   onClick={handleCreateNewStorybook}
-                  disabled={isAdding}
+                  disabled={isCreating}
                 >
-                  {isAdding ? (
+                  {isCreating ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Creating storybook...
@@ -295,16 +293,16 @@ export default function AddToStorybookPage() {
             </CardHeader>
             <CardContent className="p-6">
               <p className="mb-4">
-                {storybook
+                {storybook || storybookCreated
                   ? "Browse your existing collection of magical creatures and their stories."
                   : "After creating your storybook, you'll be able to browse your collection here."}
               </p>
             </CardContent>
             <CardFooter className="bg-gray-50 p-4">
               <Link href="/storybook" passHref className="w-full">
-                <Button variant="outline" className="w-full" disabled={!storybook}>
+                <Button variant="outline" className="w-full" disabled={!storybook && !storybookCreated}>
                   <BookOpen className="mr-2 h-4 w-4" />
-                  {storybook ? "View Storybook" : "No Storybook Yet"}
+                  {storybook || storybookCreated ? "View Storybook" : "No Storybook Yet"}
                 </Button>
               </Link>
             </CardFooter>

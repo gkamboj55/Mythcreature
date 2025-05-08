@@ -333,3 +333,34 @@ export async function reorderStories(storybookId: number, entryIds: number[]): P
     return false
   }
 }
+
+/**
+ * Create a new storybook for a device without adding a creature
+ */
+export async function createNewStorybook(deviceId: string, bookName?: string): Promise<boolean> {
+  try {
+    // Check if user already has a storybook
+    const existingStorybook = await getStorybook(deviceId)
+    if (existingStorybook) {
+      // User already has a storybook, no need to create a new one
+      return true
+    }
+
+    // Create a new storybook
+    const newBookId = await createStorybook(deviceId, bookName)
+    if (!newBookId) {
+      console.error("[SERVER] Failed to create storybook")
+      return false
+    }
+
+    console.log("[SERVER] Created new storybook with ID:", newBookId)
+
+    // Revalidate the storybook page to reflect changes
+    revalidatePath("/storybook")
+
+    return true
+  } catch (error) {
+    console.error("[SERVER] Error creating new storybook:", error)
+    return false
+  }
+}
