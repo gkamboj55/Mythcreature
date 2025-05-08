@@ -43,14 +43,28 @@ export default function AddToStorybookPage() {
 
         // Get device ID
         const deviceId = getOrCreateDeviceId()
-
-        // Check if creature is already in a storybook
-        const inBook = await isCreatureInStorybook(deviceId, id)
-        setAlreadyInBook(inBook)
+        console.log("[CLIENT] Checking if creature is in storybook with device ID:", deviceId, "and creature ID:", id)
 
         // Get existing storybook if any
         const existingStorybook = await getStorybook(deviceId)
         setStorybook(existingStorybook)
+
+        // Only check if creature is in storybook if a storybook exists
+        if (existingStorybook) {
+          try {
+            // Check if creature is already in a storybook
+            const inBook = await isCreatureInStorybook(deviceId, id)
+            console.log("[CLIENT] Is creature in storybook:", inBook)
+            setAlreadyInBook(inBook)
+          } catch (checkError) {
+            console.error("[CLIENT] Error checking if creature is in storybook:", checkError)
+            // Don't set alreadyInBook to true if there's an error
+            setAlreadyInBook(false)
+          }
+        } else {
+          // No storybook exists, so creature can't be in it
+          setAlreadyInBook(false)
+        }
 
         // Fetch creature data
         const response = await fetch(`/api/get-creature?id=${id}`)

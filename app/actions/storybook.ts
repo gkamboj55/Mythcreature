@@ -165,38 +165,56 @@ export async function getStorybook(deviceId: string): Promise<Storybook | null> 
  */
 export async function isCreatureInStorybook(deviceId: string, creatureShortId: string): Promise<boolean> {
   try {
+    if (!deviceId || !creatureShortId) {
+      console.log("[SERVER] Missing deviceId or creatureShortId in isCreatureInStorybook check")
+      return false
+    }
+
+    // Clean the creature ID
+    const cleanCreatureId = creatureShortId.split("?")[0].split(".")[0]
+    console.log(`[SERVER] Checking if creature ${cleanCreatureId} is in storybook for device ${deviceId}`)
+
     const supabase = createServerSupabaseClient()
 
     // Get the storybook ID
-    const { data: storybook } = await supabase
+    const { data: storybooks, error: storybookError } = await supabase
       .from("storybooks")
       .select("id")
       .eq("device_id", deviceId)
       .limit(1)
-      .single()
 
-    if (!storybook) return false
-
-    // Check if the creature is already in the storybook
-    const { data, error } = await supabase
-      .from("storybook_entries")
-      .select("id")
-      .eq("storybook_id", storybook.id)
-      .eq("creature_short_id", creatureShortId)
-      .limit(1)
-      .single()
-
-    if (error) {
-      // If no entry found, it's not in the storybook
-      if (error.code === "PGRST116") {
-        return false
-      }
-      throw error
+    if (storybookError) {
+      console.error("[SERVER] Error fetching storybook:", storybookError)
+      return false
     }
 
-    return !!data
+    if (!storybooks || storybooks.length === 0) {
+      console.log("[SERVER] No storybook found for device")
+      return false
+    }
+
+    const storybookId = storybooks[0].id
+    console.log(`[SERVER] Found storybook ID: ${storybookId}, checking for creature`)
+
+    // Check if the creature is already in the storybook
+    const { data: entries, error: entriesError } = await supabase
+      .from("storybook_entries")
+      .select("id")
+      .eq("storybook_id", storybookId)
+      .eq("creature_short_id", cleanCreatureId)
+      .limit(1)
+
+    if (entriesError) {
+      console.error("[SERVER] Error checking for creature in storybook:", entriesError)
+      return false
+    }
+
+    const isInBook = entries && entries.length > 0
+    console.log(`[SERVER] Creature ${cleanCreatureId} in storybook: ${isInBook}`)
+
+    return isInBook
   } catch (error) {
-    console.error("Error checking if creature is in storybook:", error)
+    console.error("[SERVER] Error in isCreatureInStorybook:", error)
     return false
   }
 }
