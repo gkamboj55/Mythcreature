@@ -9,9 +9,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { BookLayout } from "./book/book-layout"
 import { BookPageLeft } from "./book/book-page-left"
 import { BookPageRight } from "./book/book-page-right"
-import { addStoryToBook, isCreatureInStorybook } from "@/app/actions/storybook"
+import { isCreatureInStorybook } from "@/app/actions/storybook"
 import { getOrCreateDeviceId } from "@/lib/device-id"
-import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 type CreatureDetails = {
   name: string
@@ -72,6 +72,7 @@ export default function CreatureStory({
   const [imageError, setImageError] = useState(false)
   const [sceneImageError, setSceneImageError] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [addedToBook, setAddedToBook] = useState(false)
   const storyRef = useRef<HTMLDivElement>(null)
   const shareUrlRef = useRef<HTMLInputElement>(null)
   const bookContentRef = useRef<HTMLDivElement>(null)
@@ -79,10 +80,6 @@ export default function CreatureStory({
   const rightPageRef = useRef<HTMLDivElement>(null)
   const downloadLinkRef = useRef<HTMLAnchorElement>(null)
   const hasSavedRef = useRef<boolean>(false) // Use a ref to track if we've already saved
-  const [isAddingToBook, setIsAddingToBook] = useState(false)
-  const [addedToBook, setAddedToBook] = useState(false)
-
-  const router = useRouter()
 
   // Check if device is mobile on component mount
   useEffect(() => {
@@ -295,57 +292,6 @@ export default function CreatureStory({
       })
     } finally {
       setIsGeneratingPDF(false)
-    }
-  }
-
-  // Function to add the current story to the user's storybook
-  const handleAddToStorybook = async () => {
-    if (!shortId || isAddingToBook) return
-
-    setIsAddingToBook(true)
-    try {
-      console.log("Starting to add creature to storybook, shortId:", shortId)
-      const deviceId = getOrCreateDeviceId()
-      console.log("Using device ID:", deviceId)
-
-      // Show a toast to indicate we're adding to the storybook
-      toast({
-        title: "Adding to storybook...",
-        description: "Please wait while we save your creature.",
-      })
-
-      // Make sure we're using a clean shortId (no file extensions or query params)
-      const cleanShortId = shortId.split("?")[0].split(".")[0]
-      console.log("Using cleaned shortId:", cleanShortId)
-
-      const success = await addStoryToBook(deviceId, cleanShortId)
-      console.log("Add to storybook result:", success)
-
-      if (success) {
-        setAddedToBook(true)
-        toast({
-          title: "Added to your storybook!",
-          description: "This magical creature is now part of your collection.",
-        })
-
-        // Use a more direct navigation approach with a fresh URL
-        console.log("Navigating to storybook page...")
-        setTimeout(() => {
-          const storybookUrl = `/storybook?t=${Date.now()}`
-          window.location.href = storybookUrl
-        }, 1500)
-      } else {
-        throw new Error("Failed to add to storybook")
-      }
-    } catch (error) {
-      console.error("Error adding to storybook:", error)
-      toast({
-        title: "Couldn't add to storybook",
-        description: "There was an error saving this story to your book. Please try again.",
-        variant: "destructive",
-      })
-      // Reset the button state
-      setIsAddingToBook(false)
     }
   }
 
@@ -602,30 +548,28 @@ export default function CreatureStory({
           )}
         </Button>
 
-        {/* Add to Storybook Button */}
-        <Button
-          onClick={handleAddToStorybook}
-          disabled={isAddingToBook || addedToBook || !shortId}
-          variant="outline"
-          className="flex items-center space-x-2 rounded-full px-4 py-2 border-purple-300 hover:bg-purple-50 transition-colors"
-        >
-          {isAddingToBook ? (
-            <>
-              <Loader2 className="h-4 w-4 text-purple-500 animate-spin" />
-              <span>Adding to book...</span>
-            </>
-          ) : addedToBook ? (
-            <>
-              <Check className="h-4 w-4 text-green-500" />
-              <span>Added to storybook</span>
-            </>
-          ) : (
-            <>
-              <BookOpen className="h-4 w-4 text-purple-500" />
-              <span>Add to storybook</span>
-            </>
-          )}
-        </Button>
+        {/* Add to Storybook Button - Simplified to just navigate to the add-to-storybook page */}
+        {savedShortId && (
+          <Link href={`/storybook/add?id=${savedShortId}`} passHref>
+            <Button
+              variant="outline"
+              className="flex items-center space-x-2 rounded-full px-4 py-2 border-purple-300 hover:bg-purple-50 transition-colors"
+              disabled={addedToBook}
+            >
+              {addedToBook ? (
+                <>
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>Added to storybook</span>
+                </>
+              ) : (
+                <>
+                  <BookOpen className="h-4 w-4 text-purple-500" />
+                  <span>Add to storybook</span>
+                </>
+              )}
+            </Button>
+          </Link>
+        )}
       </div>
     </motion.div>
   )
