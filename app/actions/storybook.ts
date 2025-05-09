@@ -220,9 +220,8 @@ export async function isCreatureInStorybook(deviceId: string, creatureShortId: s
   }
 }
 
-/**
- * Add a story to the storybook
- */
+// Update the addStoryToBook function to use the most recently created storybook
+
 export async function addStoryToBook(deviceId: string, creatureShortId: string): Promise<boolean> {
   console.log(`[SERVER] Adding creature ${creatureShortId} to storybook for device ${deviceId}`)
 
@@ -259,36 +258,28 @@ export async function addStoryToBook(deviceId: string, creatureShortId: string):
       return false
     }
 
-    console.log("[SERVER] Creature exists, checking if already in storybook")
+    console.log("[SERVER] Creature exists, getting the most recent storybook")
 
-    // Check if the creature is already in the storybook
-    try {
-      const alreadyInBook = await isCreatureInStorybook(deviceId, cleanCreatureId)
-      if (alreadyInBook) {
-        console.log("[SERVER] Creature already in storybook")
-        return true // Already added, consider it a success
-      }
-    } catch (error) {
-      console.error("[SERVER] Error checking if creature is in storybook:", error)
-      // Continue anyway to try creating a new storybook
-    }
-
-    console.log("[SERVER] Creature not in storybook, checking for existing storybook")
-
-    // Get or create storybook
+    // Get the most recent storybook for this device
     let storybookId: number | null = null
 
     try {
-      const { data: existingStorybook } = await supabase
+      const { data: existingStorybook, error } = await supabase
         .from("storybooks")
         .select("id")
         .eq("device_id", deviceId)
+        .order("created_at", { ascending: false })
         .limit(1)
         .single()
 
+      if (error) {
+        console.error("[SERVER] Error getting most recent storybook:", error)
+        throw error
+      }
+
       if (existingStorybook) {
         storybookId = existingStorybook.id
-        console.log("[SERVER] Found existing storybook with ID:", storybookId)
+        console.log("[SERVER] Found most recent storybook with ID:", storybookId)
       }
     } catch (error) {
       console.log("[SERVER] No existing storybook found, will create new one")
@@ -403,9 +394,9 @@ export async function reorderStories(storybookId: number, entryIds: number[]): P
   }
 }
 
-/**
- * Create a new storybook for a device without adding a creature
- */
+// Update the createNewStorybook function to force creation of a new storybook
+// even if one already exists
+
 export async function createNewStorybook(deviceId: string, bookName?: string): Promise<boolean> {
   try {
     console.log("[SERVER] Starting createNewStorybook for device:", deviceId)
@@ -416,33 +407,32 @@ export async function createNewStorybook(deviceId: string, bookName?: string): P
       return false
     }
 
-    // Check if user already has a storybook
-    try {
-      const existingStorybook = await getStorybook(deviceId)
-      console.log("[SERVER] Existing storybook check result:", existingStorybook ? "Found" : "Not found")
-
-      if (existingStorybook) {
-        // User already has a storybook, no need to create a new one
-        console.log("[SERVER] User already has a storybook, returning true")
-        return true
-      }
-    } catch (checkError) {
-      console.error("[SERVER] Error checking for existing storybook:", checkError)
-      // Continue to try creating a new one
-    }
-
-    // Create a new storybook
+    // Create a new storybook directly without checking for existing ones
     console.log("[SERVER] Creating new storybook for device:", deviceId)
     try {
-      const newBookId = await createStorybook(deviceId, bookName)
-      console.log("[SERVER] Create storybook result:", newBookId)
+      const supabase = createServerSupabaseClient()
 
-      if (!newBookId) {
-        console.error("[SERVER] Failed to create storybook - no ID returned")
-        return false
+      // Insert a new storybook record
+      const { data, error } = await supabase
+        .from("storybooks")
+        .insert({
+          device_id: deviceId,
+          book_name: bookName || "My Magical Storybook",
+        })
+        .select("id")
+        .single()
+
+      if (error) {
+        console.error("[SERVER] Error creating storybook in database:", error)
+        throw new Error(`Failed to create storybook in database: ${error.message}`)
       }
 
-      console.log("[SERVER] Created new storybook with ID:", newBookId)
+      if (!data || !data.id) {
+        console.error("[SERVER] No data returned from storybook creation")
+        throw new Error("No data returned from storybook creation")
+      }
+
+      console.log("[SERVER] Successfully created storybook with ID:", data.id)
 
       // Revalidate the storybook page to reflect changes
       revalidatePath("/storybook")

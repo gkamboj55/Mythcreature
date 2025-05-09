@@ -155,7 +155,7 @@ export default function AddToStorybookPage() {
         console.log("[CLIENT] Create storybook result:", success)
 
         if (success) {
-          // Fetch the newly created storybook
+          // Fetch the newly created storybook - we need to get the most recent one
           const newStorybook = await getStorybook(deviceId)
           console.log("[CLIENT] Fetched new storybook:", newStorybook)
 
@@ -165,7 +165,7 @@ export default function AddToStorybookPage() {
 
           toast({
             title: "Storybook created!",
-            description: "Your magical storybook has been created. You can now add creatures to it.",
+            description: `Your new storybook "${newStorybookName}" has been created.`,
           })
 
           // Automatically add the creature to the new storybook
@@ -174,7 +174,7 @@ export default function AddToStorybookPage() {
             setAlreadyInBook(true)
             toast({
               title: "Creature added!",
-              description: "Your creature has been added to your new storybook.",
+              description: `Your creature has been added to "${newStorybookName}".`,
             })
           }
         } else {
