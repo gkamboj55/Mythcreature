@@ -10,6 +10,7 @@ import Link from "next/link"
 import { removeStoryFromBook, reorderStories } from "@/app/actions/storybook"
 import { toast } from "@/hooks/use-toast"
 import { useSearchParams } from "next/navigation"
+import { EditStorybookCover } from "@/components/edit-storybook-cover"
 
 export default function StorybookPage() {
   const searchParams = useSearchParams()
@@ -157,8 +158,40 @@ export default function StorybookPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <h1 className="text-3xl font-bold text-purple-800 mb-2">{storybook?.book_name || "My Magical Storybook"}</h1>
-          <p className="text-purple-600">Your collection of magical creatures and their stories</p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-purple-800 mb-2">
+                {storybook?.book_name || "My Magical Storybook"}
+              </h1>
+              <p className="text-purple-600">Your collection of magical creatures and their stories</p>
+            </div>
+
+            {storybook && (
+              <EditStorybookCover
+                storybookId={storybook.id}
+                storybookName={storybook.book_name}
+                currentCoverUrl={storybook.cover_image_url}
+                onCoverUpdated={(newCoverUrl) => {
+                  setStorybook({
+                    ...storybook,
+                    cover_image_url: newCoverUrl,
+                  })
+                }}
+              />
+            )}
+          </div>
+
+          {storybook?.cover_image_url && (
+            <div className="mt-4 flex justify-center">
+              <div className="relative w-full max-w-[200px] aspect-[3/4] rounded-lg overflow-hidden border-2 border-purple-200 shadow-md">
+                <img
+                  src={storybook.cover_image_url || "/placeholder.svg"}
+                  alt={`Cover for ${storybook.book_name}`}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {!storybook || !storybook.entries || storybook.entries.length === 0 ? (

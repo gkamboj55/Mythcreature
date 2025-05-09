@@ -2,6 +2,7 @@
 
 import { createServerSupabaseClient } from "@/lib/supabase"
 import { revalidatePath } from "next/cache"
+import OpenAI from "openai"
 
 // Types
 type Storybook = {
@@ -98,6 +99,17 @@ export async function createStorybook(deviceId: string, bookName?: string): Prom
     }
 
     console.log("[SERVER] Successfully created storybook with ID:", data.id)
+
+    // Generate a cover for the new storybook
+    const storybookName = bookName || "My Magical Storybook"
+    const coverUrl = await generateStorybookCover(storybookName, data.id)
+
+    if (coverUrl) {
+      console.log("[SERVER] Generated cover for storybook:", coverUrl)
+    } else {
+      console.log("[SERVER] Failed to generate cover for storybook")
+    }
+
     return data.id
   } catch (error) {
     console.error("[SERVER] Error in createStorybook:", error)
@@ -550,6 +562,16 @@ export async function createNewStorybook(deviceId: string, bookName?: string): P
 
       console.log("[SERVER] Successfully created storybook with ID:", data.id)
 
+      // Generate a cover for the new storybook
+      const storybookName = bookName || "My Magical Storybook"
+      const coverUrl = await generateStorybookCover(storybookName, data.id)
+
+      if (coverUrl) {
+        console.log("[SERVER] Generated cover for storybook:", coverUrl)
+      } else {
+        console.log("[SERVER] Failed to generate cover for storybook")
+      }
+
       // Revalidate the storybook page to reflect changes
       revalidatePath("/storybook")
       revalidatePath("/storybooks")
@@ -563,5 +585,109 @@ export async function createNewStorybook(deviceId: string, bookName?: string): P
   } catch (error) {
     console.error("[SERVER] Error creating new storybook:", error)
     throw error // Re-throw to be handled by the client
+  }
+}
+
+/**
+ * Generate a cover image for a storybook
+ */
+export async function generateStorybookCover(storybookName: string, storybookId: number): Promise<string | null> {
+  try {
+    // Create a prompt for the cover based on the storybook name
+    const prompt = `A magical storybook cover for a children's book titled "${storybookName}". 
+    The cover should be colorful, whimsical, and feature magical elements like stars, sparkles, 
+    and fantasy creatures. Suitable for children ages 5-10. Illustration style, vibrant colors, 
+    no text on the cover.`
+
+    // Use the existing image generation function (similar to creature image generation)
+    const imageUrl = await generateImageWithGrok(prompt)
+
+    // If we have a URL, update the storybook with the cover image
+    if (imageUrl) {
+      const supabase = createServerSupabaseClient()
+
+      // Update the storybook with the cover image URL
+      const { error } = await supabase.from("storybooks").update({ cover_image_url: imageUrl }).eq("id", storybookId)
+
+      if (error) {
+        console.error("Error updating storybook cover:", error)
+        return null
+      }
+
+      return imageUrl
+    }
+
+    return null
+  } catch (error) {
+    console.error("Error generating storybook cover:", error)
+    return null
+  }
+}
+
+/**
+ * Update the cover image for a storybook
+ */
+export async function updateStorybookCover(storybookId: number, coverUrl: string): Promise<boolean> {
+  try {
+    const supabase = createServerSupabaseClient()
+
+    // Update the storybook with the new cover image URL
+    const { error } = await supabase.from("storybooks").update({ cover_image_url: coverUrl }).eq("id", storybookId)
+
+    if (error) {
+      console.error("Error updating storybook cover:", error)
+      return false
+    }
+
+    // Revalidate paths
+    revalidatePath("/storybook")
+    revalidatePath("/storybooks")
+
+    return true
+  } catch (error) {
+    console.error("Error updating storybook cover:", error)
+    return false
+  }
+}
+
+/**
+ * Helper function to generate an image using Grok (reusing existing code)
+ */
+async function generateImageWithGrok(prompt: string): Promise<string | null> {
+  try {
+    const apiKey = process.env.X_AI_API_KEY
+
+    if (!apiKey) {
+      console.log("No API key found for image generation")
+      return null
+    }
+
+    // Ensure prompt is a string and within character limit
+    const safePrompt = (prompt || "magical storybook cover").substring(0, 500)
+
+    console.log("Generating image with prompt:", safePrompt)
+
+    // Initialize the OpenAI client with X.AI configuration
+    const openai = new OpenAI({
+      apiKey: apiKey,
+      baseURL: "https://api.x.ai/v1",
+      dangerouslyAllowBrowser: true,
+    })
+
+    // Use the exact same structure as the sample code
+    const response = await openai.images.generate({
+      prompt: safePrompt,
+      model: "grok-2-image",
+    })
+
+    // Check if we have a valid URL in the response
+    if (response.data && response.data.length > 0 && response.data[0].url) {
+      return response.data[0].url
+    }
+
+    return null
+  } catch (error) {
+    console.error("Error generating image:", error)
+    return null
   }
 }

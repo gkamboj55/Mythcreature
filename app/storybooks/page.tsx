@@ -192,15 +192,21 @@ export default function StorybooksPage() {
                       <p className="text-sm text-gray-600">Created: {new Date(book.created_at).toLocaleDateString()}</p>
                       <p className="text-sm font-medium mt-1">{book.entries?.length || 0} magical creatures</p>
                     </div>
-                    {book.cover_image_url && (
-                      <div className="w-16 h-16 rounded overflow-hidden">
+
+                    {/* Make the cover image larger and more prominent */}
+                    <div className="w-24 h-32 rounded-lg overflow-hidden border border-purple-200 shadow-sm">
+                      {book.cover_image_url ? (
                         <img
                           src={book.cover_image_url || "/placeholder.svg"}
                           alt={`Cover for ${book.book_name}`}
                           className="w-full h-full object-cover"
                         />
-                      </div>
-                    )}
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
+                          <span className="text-purple-400 text-xs">No cover</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
                 <CardFooter className="bg-gray-50 p-4 flex justify-between">

@@ -294,34 +294,53 @@ export default function AddToStorybookPage() {
                 <div className="space-y-4">
                   {storybooks.map((book) => (
                     <div key={book.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                      <h3 className="text-lg font-semibold mb-1">{book.book_name}</h3>
-                      <p className="text-sm text-gray-600 mb-3">
-                        This storybook has {book.entries?.length || 0} magical creatures.
-                      </p>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Link href={`/storybook?id=${book.id}`} passHref className="flex-1">
-                          <Button variant="outline" className="w-full">
-                            <BookOpen className="mr-2 h-4 w-4" />
-                            View Storybook
-                          </Button>
-                        </Link>
-                        <Button
-                          className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                          onClick={() => handleAddToStorybook(book.id)}
-                          disabled={isAdding === book.id}
-                        >
-                          {isAdding === book.id ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Adding...
-                            </>
+                      <div className="flex items-start gap-4">
+                        {/* Add cover image */}
+                        <div className="w-16 h-20 rounded overflow-hidden bg-purple-100 flex-shrink-0">
+                          {book.cover_image_url ? (
+                            <img
+                              src={book.cover_image_url || "/placeholder.svg"}
+                              alt={`Cover for ${book.book_name}`}
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
-                            <>
-                              <Plus className="mr-2 h-4 w-4" />
-                              Add to Storybook
-                            </>
+                            <div className="w-full h-full bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
+                              <span className="text-purple-400 text-xs">No cover</span>
+                            </div>
                           )}
-                        </Button>
+                        </div>
+
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold mb-1">{book.book_name}</h3>
+                          <p className="text-sm text-gray-600 mb-3">
+                            This storybook has {book.entries?.length || 0} magical creatures.
+                          </p>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <Link href={`/storybook?id=${book.id}`} passHref className="flex-1">
+                              <Button variant="outline" className="w-full">
+                                <BookOpen className="mr-2 h-4 w-4" />
+                                View Storybook
+                              </Button>
+                            </Link>
+                            <Button
+                              className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                              onClick={() => handleAddToStorybook(book.id)}
+                              disabled={isAdding === book.id}
+                            >
+                              {isAdding === book.id ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Adding...
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Add to Storybook
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
