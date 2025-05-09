@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Loader2, BookOpen, ArrowLeft, Plus, Check } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Loader2, BookOpen, ArrowLeft, Plus, Check, Edit } from "lucide-react"
 import Link from "next/link"
 import { getOrCreateDeviceId } from "@/lib/device-id"
 import { getStorybook, addStoryToBook, isCreatureInStorybook, createNewStorybook } from "@/app/actions/storybook"
 import { toast } from "@/hooks/use-toast"
+import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 
 export default function AddToStorybookPage() {
   const searchParams = useSearchParams()
@@ -21,6 +23,8 @@ export default function AddToStorybookPage() {
   const [creatureData, setCreatureData] = useState<any>(null)
   const [alreadyInBook, setAlreadyInBook] = useState(false)
   const [storybookCreated, setStorybookCreated] = useState(false)
+  const [newStorybookName, setNewStorybookName] = useState("My Magical Storybook")
+  const [isNameDialogOpen, setIsNameDialogOpen] = useState(false)
 
   useEffect(() => {
     async function initialize() {
@@ -124,7 +128,11 @@ export default function AddToStorybookPage() {
     }
   }
 
-  const handleCreateNewStorybook = async () => {
+  const handleCreateNewStorybook = () => {
+    setIsNameDialogOpen(true)
+  }
+
+  const handleConfirmCreateStorybook = async () => {
     if (isCreating) return
 
     setIsCreating(true)
@@ -141,9 +149,9 @@ export default function AddToStorybookPage() {
         description: "Please wait while we set up your magical storybook.",
       })
 
-      // Create a new storybook without adding the creature
+      // Create a new storybook with the custom name
       try {
-        const success = await createNewStorybook(deviceId)
+        const success = await createNewStorybook(deviceId, newStorybookName)
         console.log("[CLIENT] Create storybook result:", success)
 
         if (success) {
@@ -153,6 +161,7 @@ export default function AddToStorybookPage() {
 
           setStorybook(newStorybook)
           setStorybookCreated(true)
+          setIsNameDialogOpen(false)
 
           toast({
             title: "Storybook created!",
@@ -261,30 +270,34 @@ export default function AddToStorybookPage() {
                 <CardTitle>Add to Existing Storybook</CardTitle>
               </CardHeader>
               <CardContent className="p-6">
-                <p className="mb-4">
-                  Add this magical creature to your existing storybook collection with {storybook?.entries?.length || 0}{" "}
-                  stories.
-                </p>
+                <h3 className="text-lg font-semibold mb-2">{storybook?.book_name || "My Magical Storybook"}</h3>
+                <p className="mb-4">This storybook has {storybook?.entries?.length || 0} magical creatures.</p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Link href="/storybook" passHref className="flex-1">
+                    <Button variant="outline" className="w-full">
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      View Storybook
+                    </Button>
+                  </Link>
+                  <Button
+                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                    onClick={handleAddToStorybook}
+                    disabled={isAdding}
+                  >
+                    {isAdding ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add to Storybook
+                      </>
+                    )}
+                  </Button>
+                </div>
               </CardContent>
-              <CardFooter className="bg-gray-50 p-4">
-                <Button
-                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                  onClick={handleAddToStorybook}
-                  disabled={isAdding}
-                >
-                  {isAdding ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Adding to storybook...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add to Storybook
-                    </>
-                  )}
-                </Button>
-              </CardFooter>
             </Card>
           ) : (
             <Card>
@@ -292,11 +305,10 @@ export default function AddToStorybookPage() {
                 <CardTitle>Create New Storybook</CardTitle>
               </CardHeader>
               <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-2">New Magical Storybook</h3>
                 <p className="mb-4">
                   You don't have a storybook yet. Create your first magical storybook and add this creature to it.
                 </p>
-              </CardContent>
-              <CardFooter className="bg-gray-50 p-4">
                 <Button
                   className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white"
                   onClick={handleCreateNewStorybook}
@@ -309,12 +321,12 @@ export default function AddToStorybookPage() {
                     </>
                   ) : (
                     <>
-                      <BookOpen className="mr-2 h-4 w-4" />
-                      Create Storybook
+                      <Edit className="mr-2 h-4 w-4" />
+                      Create New Storybook
                     </>
                   )}
                 </Button>
-              </CardFooter>
+              </CardContent>
             </Card>
           )}
 
@@ -323,23 +335,60 @@ export default function AddToStorybookPage() {
               <CardTitle>View Your Storybook</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
+              <h3 className="text-lg font-semibold mb-2">
+                {storybook?.book_name || storybookCreated ? storybook?.book_name : "No Storybook Yet"}
+              </h3>
               <p className="mb-4">
                 {storybook || storybookCreated
                   ? "Browse your existing collection of magical creatures and their stories."
                   : "After creating your storybook, you'll be able to browse your collection here."}
               </p>
-            </CardContent>
-            <CardFooter className="bg-gray-50 p-4">
               <Link href="/storybook" passHref className="w-full">
                 <Button variant="outline" className="w-full" disabled={!storybook && !storybookCreated}>
                   <BookOpen className="mr-2 h-4 w-4" />
                   {storybook || storybookCreated ? "View Storybook" : "No Storybook Yet"}
                 </Button>
               </Link>
-            </CardFooter>
+            </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Dialog for entering storybook name */}
+      <Dialog open={isNameDialogOpen} onOpenChange={setIsNameDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Name Your Magical Storybook</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={newStorybookName}
+              onChange={(e) => setNewStorybookName(e.target.value)}
+              placeholder="Enter a name for your storybook"
+              className="w-full"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsNameDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmCreateStorybook}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+              disabled={isCreating || !newStorybookName.trim()}
+            >
+              {isCreating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create Storybook"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

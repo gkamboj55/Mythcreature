@@ -32,6 +32,7 @@ type StorybookEntry = {
 export async function createStorybook(deviceId: string, bookName?: string): Promise<number | null> {
   try {
     console.log("[SERVER] Creating storybook in database for device:", deviceId)
+    console.log("[SERVER] Using book name:", bookName || "My Magical Storybook")
 
     if (!deviceId) {
       console.error("[SERVER] No device ID provided to createStorybook")
@@ -408,6 +409,7 @@ export async function reorderStories(storybookId: number, entryIds: number[]): P
 export async function createNewStorybook(deviceId: string, bookName?: string): Promise<boolean> {
   try {
     console.log("[SERVER] Starting createNewStorybook for device:", deviceId)
+    console.log("[SERVER] Using book name:", bookName || "My Magical Storybook")
 
     if (!deviceId) {
       console.error("[SERVER] No device ID provided to createNewStorybook")
