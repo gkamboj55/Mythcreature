@@ -174,6 +174,62 @@ export async function getStorybook(deviceId: string): Promise<Storybook | null> 
 }
 
 /**
+ * Get a specific storybook by ID
+ */
+export async function getStorybookById(storybookId: number): Promise<Storybook | null> {
+  try {
+    if (!storybookId) {
+      console.error("[SERVER] No storybook ID provided")
+      return null
+    }
+
+    const supabase = createServerSupabaseClient()
+
+    // Get the storybook by ID
+    const { data: storybook, error: storybookError } = await supabase
+      .from("storybooks")
+      .select("*")
+      .eq("id", storybookId)
+      .single()
+
+    if (storybookError) {
+      console.error("[SERVER] Error fetching storybook by ID:", storybookError)
+      return null
+    }
+
+    // Get all entries in the storybook
+    const { data: entries, error: entriesError } = await supabase
+      .from("storybook_entries")
+      .select(`
+        id,
+        storybook_id,
+        creature_short_id,
+        page_number,
+        added_at,
+        creatures:creature_short_id (
+          short_id,
+          creature_data
+        )
+      `)
+      .eq("storybook_id", storybook.id)
+      .order("page_number", { ascending: true })
+
+    if (entriesError) {
+      console.error("[SERVER] Error fetching storybook entries:", entriesError)
+      throw entriesError
+    }
+
+    return {
+      ...storybook,
+      entries: entries || [],
+    }
+  } catch (error) {
+    console.error("[SERVER] Error getting storybook by ID:", error)
+    return null
+  }
+}
+
+/**
  * Get all storybooks for a device
  */
 export async function getAllStorybooks(deviceId: string): Promise<Storybook[]> {

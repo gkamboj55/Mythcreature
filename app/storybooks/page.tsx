@@ -182,11 +182,11 @@ export default function StorybooksPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {storybooks.map((book) => (
-              <Card key={book.id} className="overflow-hidden">
+              <Card key={book.id} className="overflow-hidden flex flex-col">
                 <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
                   <CardTitle>{book.book_name}</CardTitle>
                 </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="p-6 flex-grow">
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <p className="text-sm text-gray-600">Created: {new Date(book.created_at).toLocaleDateString()}</p>
@@ -210,7 +210,8 @@ export default function StorybooksPage() {
                   </div>
                 </CardContent>
                 <CardFooter className="bg-gray-50 p-4 flex justify-between">
-                  <Link href={`/storybook?id=${book.id}`} passHref>
+                  {/* Fix: Explicitly pass the storybook ID in the URL */}
+                  <Link href={`/storybook?id=${book.id}`}>
                     <Button variant="outline" className="flex items-center">
                       <BookOpen className="mr-2 h-4 w-4" />
                       View Storybook

@@ -24,7 +24,7 @@ export default function StorybookPage() {
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href)
       url.searchParams.set("refresh", Date.now().toString())
-      window.history.replaceState({}, "", url.pathname)
+      window.history.replaceState({}, "", url.pathname + url.search)
     }
   }, [])
 
@@ -37,16 +37,20 @@ export default function StorybookPage() {
 
         // Check if a specific storybook ID is provided
         const storybookId = searchParams.get("id")
+        console.log("Storybook ID from URL:", storybookId)
 
         let book
         if (storybookId) {
-          // TODO: Implement getStorybookById function if needed
-          book = await getStorybook(deviceId)
+          // Get a specific storybook by ID
+          const { getStorybookById } = await import("@/app/actions/storybook")
+          book = await getStorybookById(Number.parseInt(storybookId, 10))
+          console.log("Loaded specific storybook by ID:", book)
         } else {
+          // Get the default storybook
           book = await getStorybook(deviceId)
+          console.log("Loaded default storybook:", book)
         }
 
-        console.log("Storybook loaded:", book)
         setStorybook(book)
       } catch (error) {
         console.error("Error loading storybook:", error)
@@ -275,7 +279,7 @@ export default function StorybookPage() {
 
         {storybook?.entries?.length > 0 && (
           <div className="mt-8 text-center">
-            <Link href="/storybook/read" passHref>
+            <Link href={`/storybook/read?id=${storybook.id}`} passHref>
               <Button className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
                 <BookOpen className="mr-2 h-4 w-4" />
                 Read Full Storybook

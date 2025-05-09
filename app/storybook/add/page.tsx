@@ -316,7 +316,8 @@ export default function AddToStorybookPage() {
                             This storybook has {book.entries?.length || 0} magical creatures.
                           </p>
                           <div className="flex flex-col sm:flex-row gap-2">
-                            <Link href={`/storybook?id=${book.id}`} passHref className="flex-1">
+                            {/* Fix: Explicitly pass the storybook ID in the URL */}
+                            <Link href={`/storybook?id=${book.id}`} className="flex-1">
                               <Button variant="outline" className="w-full">
                                 <BookOpen className="mr-2 h-4 w-4" />
                                 View Storybook
