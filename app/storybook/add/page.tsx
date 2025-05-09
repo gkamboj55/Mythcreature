@@ -167,6 +167,16 @@ export default function AddToStorybookPage() {
             title: "Storybook created!",
             description: "Your magical storybook has been created. You can now add creatures to it.",
           })
+
+          // Automatically add the creature to the new storybook
+          if (creatureId) {
+            await addStoryToBook(deviceId, creatureId)
+            setAlreadyInBook(true)
+            toast({
+              title: "Creature added!",
+              description: "Your creature has been added to your new storybook.",
+            })
+          }
         } else {
           throw new Error("Failed to create storybook")
         }
@@ -306,9 +316,7 @@ export default function AddToStorybookPage() {
               </CardHeader>
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold mb-2">New Magical Storybook</h3>
-                <p className="mb-4">
-                  You don't have a storybook yet. Create your first magical storybook and add this creature to it.
-                </p>
+                <p className="mb-4">Create a new storybook with this magical creature as your first story.</p>
                 <Button
                   className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white"
                   onClick={handleCreateNewStorybook}
@@ -332,23 +340,28 @@ export default function AddToStorybookPage() {
 
           <Card>
             <CardHeader className="bg-gradient-to-r from-purple-700 to-indigo-500 text-white">
-              <CardTitle>View Your Storybook</CardTitle>
+              <CardTitle>Create New Storybook</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-2">
-                {storybook?.book_name || storybookCreated ? storybook?.book_name : "No Storybook Yet"}
-              </h3>
-              <p className="mb-4">
-                {storybook || storybookCreated
-                  ? "Browse your existing collection of magical creatures and their stories."
-                  : "After creating your storybook, you'll be able to browse your collection here."}
-              </p>
-              <Link href="/storybook" passHref className="w-full">
-                <Button variant="outline" className="w-full" disabled={!storybook && !storybookCreated}>
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  {storybook || storybookCreated ? "View Storybook" : "No Storybook Yet"}
-                </Button>
-              </Link>
+              <h3 className="text-lg font-semibold mb-2">Start a New Collection</h3>
+              <p className="mb-4">Create a brand new storybook with this magical creature as your first story.</p>
+              <Button
+                className="w-full bg-gradient-to-r from-purple-700 to-indigo-500 text-white"
+                onClick={handleCreateNewStorybook}
+                disabled={isCreating}
+              >
+                {isCreating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create New Storybook
+                  </>
+                )}
+              </Button>
             </CardContent>
           </Card>
         </div>
