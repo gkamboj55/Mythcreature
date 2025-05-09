@@ -311,7 +311,11 @@ export async function isCreatureInStorybook(deviceId: string, creatureShortId: s
 
 // Update the addStoryToBook function to use the most recently created storybook
 
-export async function addStoryToBook(deviceId: string, creatureShortId: string): Promise<boolean> {
+export async function addStoryToBook(
+  deviceId: string,
+  creatureShortId: string,
+  specificStorybookId?: number,
+): Promise<boolean> {
   console.log(`[SERVER] Adding creature ${creatureShortId} to storybook for device ${deviceId}`)
 
   try {
@@ -347,43 +351,63 @@ export async function addStoryToBook(deviceId: string, creatureShortId: string):
       return false
     }
 
-    console.log("[SERVER] Creature exists, getting the most recent storybook")
-
-    // Get the most recent storybook for this device
+    // Determine which storybook to use
     let storybookId: number | null = null
 
-    try {
-      const { data: existingStorybook, error } = await supabase
+    if (specificStorybookId) {
+      // Use the specified storybook ID if provided
+      storybookId = specificStorybookId
+      console.log(`[SERVER] Using specified storybook ID: ${storybookId}`)
+
+      // Verify the storybook exists and belongs to this device
+      const { data: storybook, error: verifyError } = await supabase
         .from("storybooks")
         .select("id")
+        .eq("id", storybookId)
         .eq("device_id", deviceId)
-        .order("created_at", { ascending: false })
-        .limit(1)
         .single()
 
-      if (error) {
-        console.error("[SERVER] Error getting most recent storybook:", error)
-        throw error
+      if (verifyError || !storybook) {
+        console.error("[SERVER] Specified storybook not found or doesn't belong to this device")
+        return false
+      }
+    } else {
+      console.log("[SERVER] No specific storybook ID provided, getting the most recent storybook")
+
+      // Get the most recent storybook for this device
+      try {
+        const { data: existingStorybook, error } = await supabase
+          .from("storybooks")
+          .select("id")
+          .eq("device_id", deviceId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single()
+
+        if (error) {
+          console.error("[SERVER] Error getting most recent storybook:", error)
+          throw error
+        }
+
+        if (existingStorybook) {
+          storybookId = existingStorybook.id
+          console.log("[SERVER] Found most recent storybook with ID:", storybookId)
+        }
+      } catch (error) {
+        console.log("[SERVER] No existing storybook found, will create new one")
       }
 
-      if (existingStorybook) {
-        storybookId = existingStorybook.id
-        console.log("[SERVER] Found most recent storybook with ID:", storybookId)
+      // If no storybook exists, create one
+      if (!storybookId) {
+        console.log("[SERVER] Creating new storybook")
+        const newBookId = await createStorybook(deviceId)
+        if (!newBookId) {
+          console.error("[SERVER] Failed to create storybook")
+          throw new Error("Failed to create storybook")
+        }
+        storybookId = newBookId
+        console.log("[SERVER] Created new storybook with ID:", storybookId)
       }
-    } catch (error) {
-      console.log("[SERVER] No existing storybook found, will create new one")
-    }
-
-    // If no storybook exists, create one
-    if (!storybookId) {
-      console.log("[SERVER] Creating new storybook")
-      const newBookId = await createStorybook(deviceId)
-      if (!newBookId) {
-        console.error("[SERVER] Failed to create storybook")
-        throw new Error("Failed to create storybook")
-      }
-      storybookId = newBookId
-      console.log("[SERVER] Created new storybook with ID:", storybookId)
     }
 
     // Get the next page number
