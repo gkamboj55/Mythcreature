@@ -162,6 +162,95 @@ export async function getStorybook(deviceId: string): Promise<Storybook | null> 
 }
 
 /**
+ * Get all storybooks for a device
+ */
+export async function getAllStorybooks(deviceId: string): Promise<Storybook[]> {
+  try {
+    const supabase = createServerSupabaseClient()
+
+    // Get all storybooks for this device
+    const { data: storybooks, error: storybooksError } = await supabase
+      .from("storybooks")
+      .select("*")
+      .eq("device_id", deviceId)
+      .order("created_at", { ascending: false })
+
+    if (storybooksError) {
+      console.error("Error fetching storybooks:", storybooksError)
+      throw storybooksError
+    }
+
+    if (!storybooks || storybooks.length === 0) {
+      return []
+    }
+
+    // Get entries for each storybook
+    const storybookIds = storybooks.map((book) => book.id)
+
+    const { data: entries, error: entriesError } = await supabase
+      .from("storybook_entries")
+      .select(`
+        id,
+        storybook_id,
+        creature_short_id,
+        page_number,
+        added_at
+      `)
+      .in("storybook_id", storybookIds)
+      .order("page_number", { ascending: true })
+
+    if (entriesError) {
+      console.error("Error fetching storybook entries:", entriesError)
+      throw entriesError
+    }
+
+    // Group entries by storybook ID
+    const entriesByStorybook: Record<number, any[]> = {}
+    entries?.forEach((entry) => {
+      if (!entriesByStorybook[entry.storybook_id]) {
+        entriesByStorybook[entry.storybook_id] = []
+      }
+      entriesByStorybook[entry.storybook_id].push(entry)
+    })
+
+    // Add entries to each storybook
+    return storybooks.map((book) => ({
+      ...book,
+      entries: entriesByStorybook[book.id] || [],
+    }))
+  } catch (error) {
+    console.error("Error getting all storybooks:", error)
+    return []
+  }
+}
+
+/**
+ * Delete a storybook
+ */
+export async function deleteStorybook(storybookId: number): Promise<boolean> {
+  try {
+    const supabase = createServerSupabaseClient()
+
+    // Delete the storybook (cascade will delete entries)
+    const { error } = await supabase.from("storybooks").delete().eq("id", storybookId)
+
+    if (error) {
+      console.error("Error deleting storybook:", error)
+      throw error
+    }
+
+    // Revalidate paths
+    revalidatePath("/storybooks")
+    revalidatePath("/storybook")
+
+    return true
+  } catch (error) {
+    console.error("Error deleting storybook:", error)
+    return false
+  }
+}
+
+/**
  * Check if a creature is already in the storybook
  */
 export async function isCreatureInStorybook(deviceId: string, creatureShortId: string): Promise<boolean> {
@@ -337,6 +426,7 @@ export async function addStoryToBook(deviceId: string, creatureShortId: string):
 
     // Revalidate the storybook page to reflect changes
     revalidatePath("/storybook")
+    revalidatePath("/storybooks")
 
     return true
   } catch (error) {
@@ -358,6 +448,7 @@ export async function removeStoryFromBook(entryId: number): Promise<boolean> {
 
     // Revalidate the storybook page to reflect changes
     revalidatePath("/storybook")
+    revalidatePath("/storybooks")
 
     return true
   } catch (error) {
@@ -386,6 +477,7 @@ export async function reorderStories(storybookId: number, entryIds: number[]): P
 
     // Revalidate the storybook page to reflect changes
     revalidatePath("/storybook")
+    revalidatePath("/storybooks")
 
     return true
   } catch (error) {
@@ -436,6 +528,7 @@ export async function createNewStorybook(deviceId: string, bookName?: string): P
 
       // Revalidate the storybook page to reflect changes
       revalidatePath("/storybook")
+      revalidatePath("/storybooks")
       revalidatePath("/storybook/add")
 
       return true

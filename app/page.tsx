@@ -146,15 +146,13 @@ export default function Home() {
               their adventures!
             </p>
 
-            {/* Only show storybook link if user has one */}
-            {hasStorybook && (
-              <div className="mt-4">
-                <Link href="/storybook" className="text-purple-600 hover:text-purple-800 inline-flex items-center">
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  <span>My Magical Storybook</span>
-                </Link>
-              </div>
-            )}
+            {/* Updated button text to "My Magical Storybooks" and link to the all-storybooks page */}
+            <div className="mt-4">
+              <Link href="/storybooks" className="text-purple-600 hover:text-purple-800 inline-flex items-center">
+                <BookOpen className="mr-2 h-4 w-4" />
+                <span>My Magical Storybooks</span>
+              </Link>
+            </div>
           </header>
         )}
 

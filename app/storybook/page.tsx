@@ -9,8 +9,10 @@ import { Loader2, BookOpen, ArrowLeft, MoveUp, MoveDown, Trash2, Plus } from "lu
 import Link from "next/link"
 import { removeStoryFromBook, reorderStories } from "@/app/actions/storybook"
 import { toast } from "@/hooks/use-toast"
+import { useSearchParams } from "next/navigation"
 
 export default function StorybookPage() {
+  const searchParams = useSearchParams()
   const [storybook, setStorybook] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isReordering, setIsReordering] = useState(false)
@@ -31,7 +33,18 @@ export default function StorybookPage() {
         setIsLoading(true)
         const deviceId = getOrCreateDeviceId()
         console.log("Loading storybook for device ID:", deviceId)
-        const book = await getStorybook(deviceId)
+
+        // Check if a specific storybook ID is provided
+        const storybookId = searchParams.get("id")
+
+        let book
+        if (storybookId) {
+          // TODO: Implement getStorybookById function if needed
+          book = await getStorybook(deviceId)
+        } else {
+          book = await getStorybook(deviceId)
+        }
+
         console.log("Storybook loaded:", book)
         setStorybook(book)
       } catch (error) {
@@ -42,7 +55,7 @@ export default function StorybookPage() {
     }
 
     loadStorybook()
-  }, [])
+  }, [searchParams])
 
   const handleRemoveStory = async (entryId: number) => {
     if (!confirm("Are you sure you want to remove this story from your book?")) return
@@ -131,10 +144,17 @@ export default function StorybookPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-100 to-pink-100 p-6">
       <div className="max-w-4xl mx-auto">
-        <Link href="/" className="inline-flex items-center text-purple-700 hover:text-purple-900 mb-6">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Creature Creator
-        </Link>
+        <div className="flex justify-between items-center mb-6">
+          <Link href="/" className="inline-flex items-center text-purple-700 hover:text-purple-900">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Creature Creator
+          </Link>
+
+          <Link href="/storybooks" className="inline-flex items-center text-purple-700 hover:text-purple-900">
+            <BookOpen className="mr-2 h-4 w-4" />
+            All Storybooks
+          </Link>
+        </div>
 
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
           <h1 className="text-3xl font-bold text-purple-800 mb-2">{storybook?.book_name || "My Magical Storybook"}</h1>
