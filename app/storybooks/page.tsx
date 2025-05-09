@@ -210,13 +210,15 @@ export default function StorybooksPage() {
                   </div>
                 </CardContent>
                 <CardFooter className="bg-gray-50 p-4 flex justify-between">
-                  {/* Fix: Explicitly pass the storybook ID in the URL */}
-                  <Link href={`/storybook?id=${book.id}`}>
-                    <Button variant="outline" className="flex items-center">
-                      <BookOpen className="mr-2 h-4 w-4" />
-                      View Storybook
-                    </Button>
-                  </Link>
+                  {/* Fix: Wrap button in a div with width constraints */}
+                  <div className="flex-1 mr-2">
+                    <Link href={`/storybook?id=${book.id}`} className="block w-full">
+                      <Button variant="outline" className="w-full flex items-center justify-center">
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        View Storybook
+                      </Button>
+                    </Link>
+                  </div>
                   <Button
                     variant="ghost"
                     className="text-red-500 hover:text-red-700 hover:bg-red-50"

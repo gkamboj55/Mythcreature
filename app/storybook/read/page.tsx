@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getStorybook } from "@/app/actions/storybook"
+import { getStorybook, getStorybookById } from "@/app/actions/storybook"
 import { getOrCreateDeviceId } from "@/lib/device-id"
 import { Button } from "@/components/ui/button"
 import { Loader2, ArrowLeft, ArrowRight, Home } from "lucide-react"
@@ -31,8 +31,23 @@ export default function ReadStorybookPage() {
   useEffect(() => {
     async function loadStorybook() {
       try {
-        const deviceId = getOrCreateDeviceId()
-        const book = await getStorybook(deviceId)
+        setIsLoading(true)
+
+        // Check if a specific storybook ID is provided
+        const storybookId = searchParams.get("id")
+
+        let book
+        if (storybookId) {
+          // Get a specific storybook by ID
+          book = await getStorybookById(Number.parseInt(storybookId, 10))
+          console.log("Loaded specific storybook by ID:", book)
+        } else {
+          // Get the default storybook
+          const deviceId = getOrCreateDeviceId()
+          book = await getStorybook(deviceId)
+          console.log("Loaded default storybook:", book)
+        }
+
         setStorybook(book)
       } catch (error) {
         console.error("Error loading storybook:", error)
@@ -42,7 +57,7 @@ export default function ReadStorybookPage() {
     }
 
     loadStorybook()
-  }, [])
+  }, [searchParams])
 
   if (isLoading) {
     return (
@@ -88,7 +103,7 @@ export default function ReadStorybookPage() {
           <h1 className="text-3xl font-bold text-purple-800 mb-6">Page Not Found</h1>
           <p className="text-purple-600 mb-8">This page doesn't exist in your storybook.</p>
           <div className="flex justify-center space-x-4">
-            <Link href="/storybook" passHref>
+            <Link href={`/storybook?id=${storybook.id}`} passHref>
               <Button variant="outline">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Storybook
@@ -114,7 +129,10 @@ export default function ReadStorybookPage() {
     <div className="min-h-screen bg-gradient-to-b from-purple-100 to-pink-100 p-6">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <Link href="/storybook" className="text-purple-700 hover:text-purple-900 inline-flex items-center">
+          <Link
+            href={`/storybook?id=${storybook.id}`}
+            className="text-purple-700 hover:text-purple-900 inline-flex items-center"
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Storybook
           </Link>
