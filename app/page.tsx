@@ -34,6 +34,15 @@ export default function Home() {
   // Then, add a new state variable in the component
   const [hasStorybook, setHasStorybook] = useState(false)
 
+  // Set document title
+  useEffect(() => {
+    if (initialCreatureData?.creatureDetails?.name) {
+      document.title = `${initialCreatureData.creatureDetails.name} - Magical Creature Creator`
+    } else {
+      document.title = "Magical Creature Creator"
+    }
+  }, [initialCreatureData])
+
   // Add this effect to check if the user has a storybook
   useEffect(() => {
     async function checkForStorybook() {

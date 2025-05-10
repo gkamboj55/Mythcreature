@@ -18,6 +18,15 @@ export default function StorybookPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isReordering, setIsReordering] = useState(false)
 
+  // Set document title
+  useEffect(() => {
+    if (storybook) {
+      document.title = `${storybook.book_name} - Magical Creature Creator`
+    } else {
+      document.title = "Storybook - Magical Creature Creator"
+    }
+  }, [storybook])
+
   // Force refresh on mount to ensure we get the latest data
   useEffect(() => {
     // This will ensure we're not using a cached version of the page
@@ -150,10 +159,21 @@ export default function StorybookPage() {
     <div className="min-h-screen bg-gradient-to-b from-purple-100 to-pink-100 p-6">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <Link href="/" className="inline-flex items-center text-purple-700 hover:text-purple-900">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Creature Creator
-          </Link>
+          {/* Check if we came from the add page */}
+          {searchParams.get("from") === "add" ? (
+            <Link
+              href={`/storybook/add?id=${searchParams.get("creatureId") || ""}`}
+              className="inline-flex items-center text-purple-700 hover:text-purple-900"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Add to Storybook
+            </Link>
+          ) : (
+            <Link href="/" className="inline-flex items-center text-purple-700 hover:text-purple-900">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Creature Creator
+            </Link>
+          )}
 
           <Link href="/storybooks" className="inline-flex items-center text-purple-700 hover:text-purple-900">
             <BookOpen className="mr-2 h-4 w-4" />

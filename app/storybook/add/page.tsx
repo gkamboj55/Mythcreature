@@ -27,6 +27,15 @@ export default function AddToStorybookPage() {
   const [newStorybookName, setNewStorybookName] = useState("My Magical Storybook")
   const [isNameDialogOpen, setIsNameDialogOpen] = useState(false)
 
+  // Set document title
+  useEffect(() => {
+    if (creatureData?.creatureDetails?.name) {
+      document.title = `Add ${creatureData.creatureDetails.name} to Storybook - Magical Creature Creator`
+    } else {
+      document.title = "Add to Storybook - Magical Creature Creator"
+    }
+  }, [creatureData])
+
   useEffect(() => {
     async function initialize() {
       try {
@@ -123,8 +132,8 @@ export default function AddToStorybookPage() {
           description: `This magical creature is now part of "${storybookName}".`,
         })
 
-        // Redirect to the storybook view
-        router.push(`/storybook?id=${storybookId}`)
+        // Redirect to the storybook view with a parameter to indicate we came from the add page
+        router.push(`/storybook?id=${storybookId}&from=add&creatureId=${creatureId}`)
       } else {
         throw new Error("Failed to add to storybook")
       }
@@ -208,8 +217,8 @@ export default function AddToStorybookPage() {
               description: `Your creature has been added to "${newStorybookName}".`,
             })
 
-            // Redirect to the storybook view
-            router.push(`/storybook?id=${newStorybook.id}`)
+            // Redirect to the storybook view with a parameter to indicate we came from the add page
+            router.push(`/storybook?id=${newStorybook.id}&from=add&creatureId=${creatureId}`)
           }
         } else {
           throw new Error("Failed to create storybook")

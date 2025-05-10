@@ -17,6 +17,15 @@ export default function ReadStorybookPage() {
   const [currentPage, setCurrentPage] = useState(0)
   const searchParams = useSearchParams()
 
+  // Set document title
+  useEffect(() => {
+    if (storybook) {
+      document.title = `Reading ${storybook.book_name} - Magical Creature Creator`
+    } else {
+      document.title = "Reading Storybook - Magical Creature Creator"
+    }
+  }, [storybook])
+
   // Get the starting page from URL or default to 0
   useEffect(() => {
     const pageParam = searchParams.get("page")

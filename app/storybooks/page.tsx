@@ -32,6 +32,11 @@ export default function StorybooksPage() {
   const [storybookToEdit, setStorybookToEdit] = useState<number | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
+  // Set document title
+  useEffect(() => {
+    document.title = "My Magical Storybooks - Magical Creature Creator"
+  }, [])
+
   useEffect(() => {
     loadStorybooks()
   }, [])
