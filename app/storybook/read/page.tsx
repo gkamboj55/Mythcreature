@@ -1,21 +1,27 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { getStorybook, getStorybookById } from "@/app/actions/storybook"
 import { getOrCreateDeviceId } from "@/lib/device-id"
 import { Button } from "@/components/ui/button"
-import { Loader2, ArrowLeft, ArrowRight, Home } from "lucide-react"
+import { Loader2, ArrowLeft, ArrowRight, Home, Maximize } from "lucide-react"
 import Link from "next/link"
 import { BookLayout } from "@/components/book/book-layout"
 import { BookPageLeft } from "@/components/book/book-page-left"
 import { BookPageRight } from "@/components/book/book-page-right"
 import { useSearchParams } from "next/navigation"
+import { ImmersiveReader } from "@/components/immersive-reader"
+import { PageTransition } from "@/components/page-transition"
+import type { ThemeType } from "@/components/ambient-background"
 
 export default function ReadStorybookPage() {
   const [storybook, setStorybook] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(0)
+  const [isImmersive, setIsImmersive] = useState(false)
+  const [transitionDirection, setTransitionDirection] = useState<"left" | "right" | "none">("none")
   const searchParams = useSearchParams()
+  const containerRef = useRef<HTMLDivElement>(null)
 
   // Set document title
   useEffect(() => {
@@ -67,6 +73,46 @@ export default function ReadStorybookPage() {
 
     loadStorybook()
   }, [searchParams])
+
+  // Navigation handlers
+  const handleNextPage = () => {
+    if (currentPage < (storybook?.entries?.length || 0) - 1) {
+      setTransitionDirection("left")
+      setCurrentPage((prev) => prev + 1)
+    }
+  }
+
+  const handlePrevPage = () => {
+    if (currentPage > 0) {
+      setTransitionDirection("right")
+      setCurrentPage((prev) => prev - 1)
+    }
+  }
+
+  // Determine theme based on creature habitat
+  const getThemeFromHabitat = (habitat?: string): ThemeType => {
+    if (!habitat) return "default"
+
+    const habitatLower = habitat.toLowerCase()
+
+    if (habitatLower.includes("forest") || habitatLower.includes("jungle") || habitatLower.includes("wood")) {
+      return "forest"
+    }
+    if (habitatLower.includes("ocean") || habitatLower.includes("sea") || habitatLower.includes("water")) {
+      return "ocean"
+    }
+    if (habitatLower.includes("sky") || habitatLower.includes("cloud") || habitatLower.includes("air")) {
+      return "sky"
+    }
+    if (habitatLower.includes("mountain") || habitatLower.includes("cave") || habitatLower.includes("rock")) {
+      return "mountain"
+    }
+    if (habitatLower.includes("magic") || habitatLower.includes("crystal") || habitatLower.includes("enchant")) {
+      return "magic"
+    }
+
+    return "default"
+  }
 
   if (isLoading) {
     return (
@@ -134,8 +180,58 @@ export default function ReadStorybookPage() {
   const firstParagraph = paragraphs.length > 0 ? paragraphs[0] : "Once upon a time..."
   const remainingParagraphs = paragraphs.slice(1)
 
+  // Determine theme based on creature habitat
+  const theme = getThemeFromHabitat(creature.habitat)
+
+  // Render book content
+  const renderBookContent = () => (
+    <PageTransition direction={transitionDirection} isActive={true} duration={0.5}>
+      <BookLayout
+        leftPage={
+          <BookPageLeft
+            title={`The Tale of ${creature.name}`}
+            image={storyResult.imageUrl || "/placeholder.svg"}
+            imageAlt={`${creature.name} the magical creature`}
+            firstParagraph={firstParagraph}
+          />
+        }
+        rightPage={
+          <BookPageRight
+            remainingParagraphs={remainingParagraphs}
+            image={storyResult.sceneImageUrl || "/placeholder.svg"}
+            imageAlt={`A magical scene featuring ${creature.name}`}
+          />
+        }
+      />
+    </PageTransition>
+  )
+
+  // If in immersive mode, render the immersive reader
+  if (isImmersive) {
+    return (
+      <ImmersiveReader
+        onPageChange={(direction) => {
+          if (direction === "next") {
+            handleNextPage()
+          } else {
+            handlePrevPage()
+          }
+        }}
+        onExit={() => setIsImmersive(false)}
+        hasNextPage={currentPage < storybook.entries.length - 1}
+        hasPrevPage={currentPage > 0}
+        currentPage={currentPage}
+        totalPages={storybook.entries.length}
+        theme={theme}
+      >
+        {renderBookContent()}
+      </ImmersiveReader>
+    )
+  }
+
+  // Otherwise, render the standard view
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-100 to-pink-100 p-6">
+    <div className="min-h-screen bg-gradient-to-b from-purple-100 to-pink-100 p-6" ref={containerRef}>
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <Link
@@ -158,38 +254,22 @@ export default function ReadStorybookPage() {
           </Link>
         </div>
 
-        <BookLayout
-          leftPage={
-            <BookPageLeft
-              title={`The Tale of ${creature.name}`}
-              image={storyResult.imageUrl || "/placeholder.svg"}
-              imageAlt={`${creature.name} the magical creature`}
-              firstParagraph={firstParagraph}
-            />
-          }
-          rightPage={
-            <BookPageRight
-              remainingParagraphs={remainingParagraphs}
-              image={storyResult.sceneImageUrl || "/placeholder.svg"}
-              imageAlt={`A magical scene featuring ${creature.name}`}
-            />
-          }
-        />
+        {renderBookContent()}
 
-        <div className="flex justify-between mt-8">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentPage((prev) => Math.max(0, prev - 1))}
-            disabled={currentPage === 0}
-            className="flex items-center"
-          >
+        <div className="flex justify-between items-center mt-8">
+          <Button variant="outline" onClick={handlePrevPage} disabled={currentPage === 0} className="flex items-center">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Previous Story
           </Button>
 
+          <Button variant="outline" onClick={() => setIsImmersive(true)} className="flex items-center">
+            <Maximize className="mr-2 h-4 w-4" />
+            Immersive Mode
+          </Button>
+
           <Button
             variant="outline"
-            onClick={() => setCurrentPage((prev) => Math.min(storybook.entries.length - 1, prev + 1))}
+            onClick={handleNextPage}
             disabled={currentPage === storybook.entries.length - 1}
             className="flex items-center"
           >
