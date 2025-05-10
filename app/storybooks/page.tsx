@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Loader2, BookOpen, ArrowLeft, Plus, Trash2 } from "lucide-react"
+import { Loader2, BookOpen, ArrowLeft, Plus, Trash2, Edit } from "lucide-react"
 import Link from "next/link"
 import { getOrCreateDeviceId } from "@/lib/device-id"
-import { getAllStorybooks, deleteStorybook } from "@/app/actions/storybook"
+import { getAllStorybooks, deleteStorybook, updateStorybookName } from "@/app/actions/storybook"
 import { toast } from "@/hooks/use-toast"
 import {
   Dialog,
@@ -23,9 +23,13 @@ export default function StorybooksPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
   const [isDeleting, setIsDeleting] = useState<Record<number, boolean>>({})
+  const [isEditing, setIsEditing] = useState<Record<number, boolean>>({})
   const [newStorybookName, setNewStorybookName] = useState("My Magical Storybook")
+  const [editStorybookName, setEditStorybookName] = useState("")
   const [isNameDialogOpen, setIsNameDialogOpen] = useState(false)
+  const [isEditNameDialogOpen, setIsEditNameDialogOpen] = useState(false)
   const [storybookToDelete, setStorybookToDelete] = useState<number | null>(null)
+  const [storybookToEdit, setStorybookToEdit] = useState<number | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
   useEffect(() => {
@@ -94,6 +98,46 @@ export default function StorybooksPage() {
     }
   }
 
+  const handleEditStorybook = (storybookId: number, currentName: string) => {
+    setStorybookToEdit(storybookId)
+    setEditStorybookName(currentName)
+    setIsEditNameDialogOpen(true)
+  }
+
+  const handleConfirmEditStorybook = async () => {
+    if (!storybookToEdit || !editStorybookName.trim()) return
+
+    setIsEditing((prev) => ({ ...prev, [storybookToEdit]: true }))
+    try {
+      const success = await updateStorybookName(storybookToEdit, editStorybookName)
+
+      if (success) {
+        toast({
+          title: "Storybook updated",
+          description: "Your storybook name has been updated successfully.",
+        })
+
+        // Update the storybook name in the local state
+        setStorybooks((prev) =>
+          prev.map((book) => (book.id === storybookToEdit ? { ...book, book_name: editStorybookName } : book)),
+        )
+      } else {
+        throw new Error("Failed to update storybook name")
+      }
+    } catch (error) {
+      console.error("Error updating storybook name:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update storybook name",
+        variant: "destructive",
+      })
+    } finally {
+      setIsEditing((prev) => ({ ...prev, [storybookToEdit!]: false }))
+      setIsEditNameDialogOpen(false)
+      setStorybookToEdit(null)
+    }
+  }
+
   const handleDeleteStorybook = (storybookId: number) => {
     setStorybookToDelete(storybookId)
     setIsDeleteDialogOpen(true)
@@ -151,14 +195,14 @@ export default function StorybooksPage() {
         </Link>
 
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold text-purple-800 mb-2">My Magical Storybooks</h1>
               <p className="text-purple-600">Your collection of magical creatures and their stories</p>
             </div>
             <Button
               onClick={handleCreateNewStorybook}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white whitespace-nowrap"
             >
               <Plus className="mr-2 h-4 w-4" />
               New Storybook
@@ -184,7 +228,19 @@ export default function StorybooksPage() {
             {storybooks.map((book) => (
               <Card key={book.id} className="overflow-hidden flex flex-col">
                 <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                  <CardTitle>{book.book_name}</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>{book.book_name}</CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-purple-600/20 p-1 h-auto"
+                      onClick={() => handleEditStorybook(book.id, book.book_name)}
+                      disabled={isEditing[book.id]}
+                    >
+                      {isEditing[book.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit className="h-4 w-4" />}
+                      <span className="sr-only">Edit storybook name</span>
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-6 flex-grow">
                   <div className="flex items-center justify-between mb-4">
@@ -210,7 +266,6 @@ export default function StorybooksPage() {
                   </div>
                 </CardContent>
                 <CardFooter className="bg-gray-50 p-4 flex justify-between">
-                  {/* Fix: Wrap button in a div with width constraints */}
                   <div className="flex-1 mr-2">
                     <Link href={`/storybook?id=${book.id}`} className="block w-full">
                       <Button variant="outline" className="w-full flex items-center justify-center">
@@ -269,6 +324,35 @@ export default function StorybooksPage() {
               ) : (
                 "Create Storybook"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog for editing storybook name */}
+      <Dialog open={isEditNameDialogOpen} onOpenChange={setIsEditNameDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Storybook Name</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={editStorybookName}
+              onChange={(e) => setEditStorybookName(e.target.value)}
+              placeholder="Enter a new name for your storybook"
+              className="w-full"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditNameDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmEditStorybook}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+              disabled={!editStorybookName.trim()}
+            >
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>

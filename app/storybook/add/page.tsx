@@ -4,14 +4,13 @@ import { useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, BookOpen, ArrowLeft, Plus, Edit } from "lucide-react"
+import { Loader2, BookOpen, ArrowLeft, Plus } from "lucide-react"
 import Link from "next/link"
 import { getOrCreateDeviceId } from "@/lib/device-id"
 import { getStorybook, addStoryToBook, createNewStorybook, getAllStorybooks } from "@/app/actions/storybook"
 import { toast } from "@/hooks/use-toast"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { createServerSupabaseClient } from "@/lib/supabase"
 
 export default function AddToStorybookPage() {
   const searchParams = useSearchParams()
@@ -94,18 +93,10 @@ export default function AddToStorybookPage() {
     try {
       const deviceId = getOrCreateDeviceId()
 
-      // First check if the creature is already in this specific storybook
-      const supabase = createServerSupabaseClient()
-      const { data: existingEntries, error: checkError } = await supabase
-        .from("storybook_entries")
-        .select("id")
-        .eq("storybook_id", storybookId)
-        .eq("creature_short_id", creatureId)
-        .limit(1)
+      // Check if the creature is already in this specific storybook
+      const isAlreadyInThisBook = await isCreatureInStorybook(deviceId, creatureId, storybookId)
 
-      if (checkError) {
-        console.error("[CLIENT] Error checking if creature exists in storybook:", checkError)
-      } else if (existingEntries && existingEntries.length > 0) {
+      if (isAlreadyInThisBook) {
         // Creature is already in this specific storybook
         toast({
           title: "Already in storybook",
@@ -146,6 +137,26 @@ export default function AddToStorybookPage() {
       })
     } finally {
       setIsAdding(null)
+    }
+  }
+
+  // Helper function to check if a creature is in a specific storybook
+  const isCreatureInStorybook = async (deviceId: string, creatureId: string, storybookId: number): Promise<boolean> => {
+    try {
+      // Make a fetch request to check if the creature is in the storybook
+      const response = await fetch(
+        `/api/check-creature-in-storybook?deviceId=${deviceId}&creatureId=${creatureId}&storybookId=${storybookId}`,
+      )
+
+      if (!response.ok) {
+        throw new Error("Failed to check if creature is in storybook")
+      }
+
+      const data = await response.json()
+      return data.isInStorybook
+    } catch (error) {
+      console.error("Error checking if creature is in storybook:", error)
+      return false
     }
   }
 
@@ -271,8 +282,9 @@ export default function AddToStorybookPage() {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {storybooks && storybooks.length > 0 ? (
-            <Card>
+          {/* Only show the existing storybooks card if there are storybooks */}
+          {storybooks && storybooks.length > 0 && (
+            <Card className="overflow-hidden">
               <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
                 <CardTitle>Add to Existing Storybook</CardTitle>
               </CardHeader>
@@ -301,35 +313,34 @@ export default function AddToStorybookPage() {
                           <p className="text-sm text-gray-600 mb-3">
                             This storybook has {book.entries?.length || 0} magical creatures.
                           </p>
-                          <div className="flex flex-col sm:flex-row gap-2">
-                            {/* Fix: Properly constrain button width */}
-                            <div className="flex-1">
-                              <Link href={`/storybook?id=${book.id}`} className="block w-full">
-                                <Button variant="outline" className="w-full">
-                                  <BookOpen className="mr-2 h-4 w-4" />
-                                  View Storybook
-                                </Button>
+
+                          {/* Fixed button layout */}
+                          <div className="flex flex-wrap gap-2">
+                            <Button variant="outline" size="sm" className="flex-1 min-w-[120px]" asChild>
+                              <Link href={`/storybook?id=${book.id}`}>
+                                <BookOpen className="mr-2 h-4 w-4" />
+                                View Storybook
                               </Link>
-                            </div>
-                            <div className="flex-1">
-                              <Button
-                                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                                onClick={() => handleAddToStorybook(book.id)}
-                                disabled={isAdding === book.id}
-                              >
-                                {isAdding === book.id ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Adding...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add to Storybook
-                                  </>
-                                )}
-                              </Button>
-                            </div>
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              className="flex-1 min-w-[120px] bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                              onClick={() => handleAddToStorybook(book.id)}
+                              disabled={isAdding === book.id}
+                            >
+                              {isAdding === book.id ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Adding...
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Add to Storybook
+                                </>
+                              )}
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -338,36 +349,10 @@ export default function AddToStorybookPage() {
                 </div>
               </CardContent>
             </Card>
-          ) : (
-            <Card>
-              <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                <CardTitle>Create New Storybook</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <h3 className="text-lg font-semibold mb-2">New Magical Storybook</h3>
-                <p className="mb-4">Create a new storybook with this magical creature as your first story.</p>
-                <Button
-                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                  onClick={handleCreateNewStorybook}
-                  disabled={isCreating}
-                >
-                  {isCreating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating storybook...
-                    </>
-                  ) : (
-                    <>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Create New Storybook
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
           )}
 
-          <Card>
+          {/* Always show the create new storybook card */}
+          <Card className={`overflow-hidden ${storybooks.length === 0 ? "md:col-span-2" : ""}`}>
             <CardHeader className="bg-gradient-to-r from-purple-700 to-indigo-500 text-white">
               <CardTitle>Create New Storybook</CardTitle>
             </CardHeader>

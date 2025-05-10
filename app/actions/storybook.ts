@@ -707,6 +707,36 @@ export async function updateStorybookCover(storybookId: number, coverUrl: string
 }
 
 /**
+ * Update the name of a storybook
+ */
+export async function updateStorybookName(storybookId: number, newName: string): Promise<boolean> {
+  try {
+    if (!storybookId || !newName.trim()) {
+      return false
+    }
+
+    const supabase = createServerSupabaseClient()
+
+    // Update the storybook name
+    const { error } = await supabase.from("storybooks").update({ book_name: newName.trim() }).eq("id", storybookId)
+
+    if (error) {
+      console.error("Error updating storybook name:", error)
+      return false
+    }
+
+    // Revalidate paths
+    revalidatePath("/storybook")
+    revalidatePath("/storybooks")
+
+    return true
+  } catch (error) {
+    console.error("Error updating storybook name:", error)
+    return false
+  }
+}
+
+/**
  * Helper function to generate an image using Grok (reusing existing code)
  */
 async function generateImageWithGrok(prompt: string): Promise<string | null> {
