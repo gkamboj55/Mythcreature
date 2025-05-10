@@ -328,7 +328,7 @@ export default function AddToStorybookPage() {
                             <Button variant="outline" size="sm" className="flex-1 min-w-[120px]" asChild>
                               <Link href={`/storybook?id=${book.id}`}>
                                 <BookOpen className="mr-2 h-4 w-4" />
-                                View Storybook
+                                View
                               </Link>
                             </Button>
 
@@ -346,7 +346,7 @@ export default function AddToStorybookPage() {
                               ) : (
                                 <>
                                   <Plus className="mr-2 h-4 w-4" />
-                                  Add to Storybook
+                                  Add Creature
                                 </>
                               )}
                             </Button>
