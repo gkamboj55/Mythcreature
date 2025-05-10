@@ -3,18 +3,18 @@
 import { useEffect } from "react"
 
 interface UseKeyboardNavigationProps {
-  onNext?: () => void
-  onPrev?: () => void
-  onExit?: () => void
-  onToggleFullscreen?: () => void
+  onNextPage?: () => void
+  onPrevPage?: () => void
+  onNextStory?: () => void
+  onPrevStory?: () => void
   enabled?: boolean
 }
 
 export function useKeyboardNavigation({
-  onNext,
-  onPrev,
-  onExit,
-  onToggleFullscreen,
+  onNextPage,
+  onPrevPage,
+  onNextStory,
+  onPrevStory,
   enabled = true,
 }: UseKeyboardNavigationProps) {
   useEffect(() => {
@@ -24,27 +24,29 @@ export function useKeyboardNavigation({
       switch (e.key) {
         case "ArrowRight":
         case "Space":
-          if (onNext) {
+          if (onNextPage) {
             e.preventDefault()
-            onNext()
+            onNextPage()
           }
           break
         case "ArrowLeft":
-          if (onPrev) {
+          if (onPrevPage) {
             e.preventDefault()
-            onPrev()
+            onPrevPage()
           }
           break
-        case "Escape":
-          if (onExit) {
+        case "ArrowDown":
+        case "PageDown":
+          if (onNextStory) {
             e.preventDefault()
-            onExit()
+            onNextStory()
           }
           break
-        case "f":
-          if (onToggleFullscreen && e.ctrlKey) {
+        case "ArrowUp":
+        case "PageUp":
+          if (onPrevStory) {
             e.preventDefault()
-            onToggleFullscreen()
+            onPrevStory()
           }
           break
       }
@@ -54,7 +56,7 @@ export function useKeyboardNavigation({
     return () => {
       window.removeEventListener("keydown", handleKeyDown)
     }
-  }, [enabled, onNext, onPrev, onExit, onToggleFullscreen])
+  }, [enabled, onNextPage, onPrevPage, onNextStory, onPrevStory])
 
   return { enabled }
 }
