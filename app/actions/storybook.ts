@@ -564,7 +564,10 @@ export async function reorderStories(storybookId: number, entryIds: number[]): P
         .eq("id", entryIds[i])
         .eq("storybook_id", storybookId)
 
-      if (error) throw error
+      if (error) {
+        console.error(`Error updating page number for entry ${entryIds[i]}:`, error)
+        throw error
+      }
     }
 
     // Revalidate the storybook page to reflect changes
@@ -658,19 +661,58 @@ export async function generateStorybookCover(storybookName: string, storybookId:
     // Use the existing image generation function (similar to creature image generation)
     const imageUrl = await generateImageWithGrok(prompt)
 
-    // If we have a URL, update the storybook with the cover image
+    // If we have a URL, store it in Supabase Storage and update the storybook
     if (imageUrl) {
       const supabase = createServerSupabaseClient()
 
-      // Update the storybook with the cover image URL
-      const { error } = await supabase.from("storybooks").update({ cover_image_url: imageUrl }).eq("id", storybookId)
+      // Generate a unique filename
+      const filename = `storybook-${storybookId}-cover-${Date.now()}.png`
+      const filePath = `storybooks/${filename}`
 
-      if (error) {
-        console.error("Error updating storybook cover:", error)
-        return null
+      try {
+        // Fetch the image
+        const response = await fetch(imageUrl)
+        if (!response.ok) {
+          console.error(`Failed to fetch image: ${response.status}`)
+          return imageUrl // Return original URL as fallback
+        }
+
+        // Get the image as a blob
+        const imageBlob = await response.blob()
+
+        // Upload to Supabase Storage
+        const { data, error } = await supabase.storage.from("creature-images").upload(filePath, imageBlob, {
+          contentType: "image/png",
+          upsert: true,
+        })
+
+        if (error) {
+          console.error("Error uploading storybook cover to Supabase:", error)
+          return imageUrl // Return original URL as fallback
+        }
+
+        // Get the public URL
+        const { data: publicUrlData } = supabase.storage.from("creature-images").getPublicUrl(filePath)
+        const storedImageUrl = publicUrlData.publicUrl
+
+        console.log("Stored storybook cover in Supabase:", storedImageUrl)
+
+        // Update the storybook with the cover image URL
+        const { error: updateError } = await supabase
+          .from("storybooks")
+          .update({ cover_image_url: storedImageUrl })
+          .eq("id", storybookId)
+
+        if (updateError) {
+          console.error("Error updating storybook cover:", updateError)
+          return storedImageUrl // Still return the stored URL
+        }
+
+        return storedImageUrl
+      } catch (storageError) {
+        console.error("Error storing storybook cover:", storageError)
+        return imageUrl // Return original URL as fallback
       }
-
-      return imageUrl
     }
 
     return null

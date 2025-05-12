@@ -30,7 +30,9 @@ export function BookPageRight({ remainingParagraphs, image, imageAlt }: BookPage
 
       {/* Book edge effect */}
       <div className="book-edge book-edge-left"></div>
-      <div className="page-number left-4">2</div>
+
+      {/* Single page number */}
+      <div className="absolute bottom-2 left-4 text-amber-800/50 text-sm">2</div>
     </div>
   )
 }

@@ -67,7 +67,7 @@ export function BookLayout({
                 {/* Left page */}
                 <div className="w-full p-6 bg-amber-50 relative book-page">
                   <div className="pr-4">{leftPage}</div>
-                  <div className="absolute bottom-2 right-4 text-amber-800/50 text-sm">1</div>
+                  {/* Page number is now handled in the BookPageLeft component */}
                 </div>
               </motion.div>
             ) : (
@@ -81,7 +81,7 @@ export function BookLayout({
                 {/* Right page */}
                 <div className="w-full p-6 bg-amber-50 relative book-page">
                   <div className="pl-4">{rightPage}</div>
-                  <div className="absolute bottom-2 left-4 text-amber-800/50 text-sm">2</div>
+                  {/* Page number is now handled in the BookPageRight component */}
                 </div>
               </motion.div>
             )}

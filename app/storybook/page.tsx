@@ -124,12 +124,33 @@ export default function StorybookPage() {
 
       // Update the page numbers
       const entryIds = newEntries.map((entry: any) => entry.id)
+
+      // Update page numbers in the UI immediately
+      const updatedEntries = newEntries.map((entry: any, index: number) => ({
+        ...entry,
+        page_number: index + 1,
+      }))
+
+      setStorybook({
+        ...storybook,
+        entries: updatedEntries,
+      })
+
+      // Then send to the server
       const success = await reorderStories(storybook.id, entryIds)
 
-      if (success) {
+      if (!success) {
+        // If server update fails, revert to original order
+        toast({
+          title: "Error",
+          description: "Failed to reorder the stories.",
+          variant: "destructive",
+        })
+
+        // Revert to original entries
         setStorybook({
           ...storybook,
-          entries: newEntries,
+          entries: storybook.entries,
         })
       }
     } catch (error) {

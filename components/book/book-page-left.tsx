@@ -24,7 +24,9 @@ export function BookPageLeft({ title, image, imageAlt, firstParagraph }: BookPag
 
       {/* Book edge effect */}
       <div className="book-edge book-edge-right"></div>
-      <div className="page-number right-4">1</div>
+
+      {/* Single page number */}
+      <div className="absolute bottom-2 right-4 text-amber-800/50 text-sm">1</div>
     </div>
   )
 }
